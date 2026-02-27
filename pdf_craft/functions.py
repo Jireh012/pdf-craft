@@ -1,3 +1,4 @@
+import os
 from os import PathLike
 from typing import Callable, Literal
 
@@ -10,15 +11,35 @@ from .pdf import OCR, DeepSeekOCRSize, OCREvent, PDFHandler
 from .transform import Transform
 
 
+def _resolve_ocr_api_key(ocr_api_key: str | None) -> str | None:
+    return ocr_api_key or os.environ.get("SILICONFLOW_API_KEY") or os.environ.get("OCR_API_KEY")
+
+
+def _resolve_ocr_api_base_url(ocr_api_base_url: str | None) -> str | None:
+    return ocr_api_base_url or os.environ.get("OCR_API_BASE_URL") or None
+
+
+def _resolve_ocr_api_model(ocr_api_model: str | None) -> str | None:
+    return ocr_api_model or os.environ.get("OCR_API_MODEL") or None
+
+
 def predownload_models(
     models_cache_path: PathLike | None = None,
     pdf_handler: PDFHandler | None = None,
     revision: str | None = None,
+    *,
+    ocr_api_key: str | None = None,
+    ocr_api_base_url: str | None = None,
+    ocr_api_model: str | None = None,
 ) -> None:
+    api_key = _resolve_ocr_api_key(ocr_api_key)
     ocr = OCR(
         model_path=models_cache_path,
         pdf_handler=pdf_handler,
         local_only=False,
+        ocr_api_key=api_key,
+        ocr_api_base_url=_resolve_ocr_api_base_url(ocr_api_base_url),
+        ocr_api_model=_resolve_ocr_api_model(ocr_api_model),
     )
     ocr.predownload(revision)
 
@@ -45,11 +66,18 @@ def transform_markdown(
     max_ocr_tokens: int | None = None,
     max_ocr_output_tokens: int | None = None,
     on_ocr_event: Callable[[OCREvent], None] = lambda _: None,
+    *,
+    ocr_api_key: str | None = None,
+    ocr_api_base_url: str | None = None,
+    ocr_api_model: str | None = None,
 ) -> OCRTokensMetering:
     return Transform(
         models_cache_path=models_cache_path,
         pdf_handler=pdf_handler,
         local_only=local_only,
+        ocr_api_key=_resolve_ocr_api_key(ocr_api_key),
+        ocr_api_base_url=_resolve_ocr_api_base_url(ocr_api_base_url),
+        ocr_api_model=_resolve_ocr_api_model(ocr_api_model),
     ).transform_markdown(
         pdf_path=pdf_path,
         markdown_path=markdown_path,
@@ -98,11 +126,18 @@ def transform_epub(
     max_ocr_tokens: int | None = None,
     max_ocr_output_tokens: int | None = None,
     on_ocr_event: Callable[[OCREvent], None] = lambda _: None,
+    *,
+    ocr_api_key: str | None = None,
+    ocr_api_base_url: str | None = None,
+    ocr_api_model: str | None = None,
 ) -> OCRTokensMetering:
     return Transform(
         models_cache_path=models_cache_path,
         pdf_handler=pdf_handler,
         local_only=local_only,
+        ocr_api_key=_resolve_ocr_api_key(ocr_api_key),
+        ocr_api_base_url=_resolve_ocr_api_base_url(ocr_api_base_url),
+        ocr_api_model=_resolve_ocr_api_model(ocr_api_model),
     ).transform_epub(
         pdf_path=pdf_path,
         epub_path=epub_path,

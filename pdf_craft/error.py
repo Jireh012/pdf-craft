@@ -16,6 +16,22 @@ class OCRError(Exception):
         self.step_index: int = step_index
 
 
+class TokenLimitError(Exception):
+    """Token 用量超限（用于 OCR 前的预检查或 API 后端）。"""
+
+    def __init__(self, input_tokens: int = 0, output_tokens: int = 0) -> None:
+        super().__init__()
+        self.input_tokens: int = input_tokens
+        self.output_tokens: int = output_tokens
+
+
+class AbortError(Exception):
+    """用户中止 OCR（用于 API 后端或未安装 doc-page-extractor 时的 check_aborted）。"""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
 def is_inline_error(error: Exception) -> bool:
     return isinstance(error, (PDFError, OCRError))
 
@@ -43,13 +59,35 @@ class InterruptedError(Exception):
 
 
 def to_interrupted_error(error: Exception) -> InterruptedError | None:
-    from doc_page_extractor import AbortError, ExtractionAbortedError, TokenLimitError
-
+    if isinstance(error, TokenLimitError):
+        return InterruptedError(
+            kind=InterruptedKind.TOKEN_LIMIT_EXCEEDED,
+            metering=OCRTokensMetering(
+                input_tokens=error.input_tokens,
+                output_tokens=error.output_tokens,
+            ),
+        )
+    if isinstance(error, AbortError):
+        return InterruptedError(
+            kind=InterruptedKind.ABORT,
+            metering=OCRTokensMetering(
+                input_tokens=getattr(error, "input_tokens", 0),
+                output_tokens=getattr(error, "output_tokens", 0),
+            ),
+        )
+    try:
+        from doc_page_extractor import (
+            AbortError as DPEAbortError,
+            ExtractionAbortedError,
+            TokenLimitError as DPETokenLimitError,
+        )
+    except ImportError:
+        return None
     if isinstance(error, ExtractionAbortedError):
         kind: InterruptedKind | None = None
-        if isinstance(error, AbortError):
+        if isinstance(error, DPEAbortError):
             kind = InterruptedKind.ABORT
-        elif isinstance(error, TokenLimitError):
+        elif isinstance(error, DPETokenLimitError):
             kind = InterruptedKind.TOKEN_LIMIT_EXCEEDED
 
         if kind is not None:

@@ -179,6 +179,48 @@ transform_markdown(
 )
 ```
 
+#### 使用第三方 OCR API（如硅基流动）
+
+无需本地 GPU 时，可通过 OpenAI 兼容的第三方 API（如[硅基流动](https://siliconflow.cn) DeepSeek-OCR）完成 OCR。设置 API Key 后，无需安装 CUDA 或下载本地模型即可转换。
+
+**环境变量**（可选，也可通过函数参数传入）：
+
+- `SILICONFLOW_API_KEY` 或 `OCR_API_KEY`：API Key
+- `OCR_API_BASE_URL`：接口地址，默认 `https://api.siliconflow.cn/v1`
+- `OCR_API_MODEL`：模型名，默认 `DeepSeek/DeepSeek-OCR`
+
+**示例**：
+
+```python
+import os
+os.environ["SILICONFLOW_API_KEY"] = "your-api-key"
+
+from pdf_craft import transform_markdown
+
+transform_markdown(
+    pdf_path="input.pdf",
+    markdown_path="output.md",
+    markdown_assets_path="images",
+)
+```
+
+或通过参数传入（优先于环境变量）：
+
+```python
+from pdf_craft import transform_markdown
+
+transform_markdown(
+    pdf_path="input.pdf",
+    markdown_path="output.md",
+    markdown_assets_path="images",
+    ocr_api_key="your-api-key",
+    ocr_api_base_url="https://api.siliconflow.cn/v1",  # 可选
+    ocr_api_model="DeepSeek/DeepSeek-OCR",  # 可选
+)
+```
+
+**当前 API 模式限制**：使用 API 时，每页识别结果会作为单一块输出（无细粒度 bbox/ref），目录与阅读顺序依赖 bbox 的能力会弱化；脚注暂不单独区分。若需最佳版面与脚注效果，建议使用本地 GPU 模式。
+
 ## API 参考
 
 ### OCR 模型

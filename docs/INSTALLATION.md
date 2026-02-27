@@ -4,14 +4,18 @@
 
 - Python >= 3.10, < 3.14 (3.11.16 recommended)
 - Poppler (required for PDF parsing and rendering)
-- NVIDIA GPU with CUDA 11.8 or 12.1 support
-- 16 GB or more VRAM (24 GB or higher recommended, see [DeepSeek OCR Hardware Requirements Discussion](https://huggingface.co/deepseek-ai/DeepSeek-OCR/discussions/31))
+- **Local OCR**: NVIDIA GPU with CUDA 11.8 or 12.1 support; 16 GB or more VRAM (24 GB or higher recommended, see [DeepSeek OCR Hardware Requirements Discussion](https://huggingface.co/deepseek-ai/DeepSeek-OCR/discussions/31))
+- **Third-party OCR API**: No GPU required; only an API key (e.g. [SiliconFlow](https://siliconflow.cn) DeepSeek-OCR). See [README - Using a Third-Party OCR API](README.md#using-a-third-party-ocr-api-eg-siliconflow).
 
 ## Installation Steps
 
-This project uses DeepSeek OCR for document recognition, which **must run in a CUDA environment**. If you need to actually use pdf-craft for PDF conversion, please follow the CUDA environment installation steps below.
+When using **local** DeepSeek OCR for document recognition, pdf-craft **must run in a CUDA environment**. If you use a **third-party OCR API** (e.g. SiliconFlow) instead, no CUDA is required—only an API key.
 
-If you only need to develop code, get IDE type hints, or read the source code, you can choose the CPU environment installation as an alternative, but it will not be able to perform actual OCR recognition.
+To actually use pdf-craft for PDF conversion, choose one of:
+- **Local OCR**: Follow the CUDA environment installation steps below
+- **Third-party API**: Set `SILICONFLOW_API_KEY` (or `OCR_API_KEY`) etc.; see [README - Using a Third-Party OCR API](../README.md#using-a-third-party-ocr-api-eg-siliconflow)
+
+If you only need to develop code, get IDE type hints, or read the source code, you can choose the CPU environment installation as an alternative, but it will not be able to perform local OCR (third-party API can still be used).
 
 ### CUDA Environment Installation (Recommended)
 

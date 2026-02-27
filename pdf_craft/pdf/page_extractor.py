@@ -13,6 +13,8 @@ from .types import DeepSeekOCRSize, Page, PageLayout
 
 
 class PageExtractorNode:
+    """本地 DeepSeek-OCR 后端，基于 doc-page-extractor，实现 PageExtractorBackend 协议。"""
+
     def __init__(
         self,
         model_path: Path | None = None,

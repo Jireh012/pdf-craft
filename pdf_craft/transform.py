@@ -28,11 +28,18 @@ class Transform:
         models_cache_path: PathLike | str | None = None,
         pdf_handler: PDFHandler | None = None,
         local_only: bool = False,
+        *,
+        ocr_api_key: str | None = None,
+        ocr_api_base_url: str | None = None,
+        ocr_api_model: str | None = None,
     ) -> None:
         self._ocr: OCR = OCR(
             model_path=models_cache_path,
             pdf_handler=pdf_handler,
             local_only=local_only,
+            ocr_api_key=ocr_api_key,
+            ocr_api_base_url=ocr_api_base_url,
+            ocr_api_model=ocr_api_model,
         )
 
     def predownload(self, revision: str | None = None) -> None:

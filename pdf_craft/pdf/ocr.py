@@ -10,9 +10,21 @@ from typing import Callable, Container, Generator, TypeVar
 from PIL.Image import Image
 
 from ..common import AssetHub, save_xml
-from ..error import IgnoreOCRErrorsChecker, IgnorePDFErrorsChecker, OCRError, PDFError
+from ..error import (
+    IgnoreOCRErrorsChecker,
+    IgnorePDFErrorsChecker,
+    OCRError,
+    PDFError,
+    TokenLimitError,
+)
 from ..metering import AbortedCheck, check_aborted
 from ..to_path import to_path
+from .api_extractor import (
+    APIPageExtractor,
+    DEFAULT_OCR_API_BASE_URL,
+    DEFAULT_OCR_API_MODEL,
+)
+from .backend import PageExtractorBackend
 from .handler import DefaultPDFHandler, PDFHandler
 from .page_extractor import Page, PageExtractorNode, PageLayout
 from .page_ref import PageRefContext
@@ -39,17 +51,48 @@ class OCREvent:
     error: Exception | None = None
 
 
+def _resolve_extractor(
+    ocr_backend: PageExtractorBackend | None,
+    ocr_api_key: str | None,
+    ocr_api_base_url: str | None,
+    ocr_api_model: str | None,
+    model_path: PathLike | str | None,
+    local_only: bool,
+) -> PageExtractorBackend:
+    if ocr_backend is not None:
+        return ocr_backend
+    if ocr_api_key:
+        return APIPageExtractor(
+            api_key=ocr_api_key,
+            base_url=ocr_api_base_url or DEFAULT_OCR_API_BASE_URL,
+            model=ocr_api_model or DEFAULT_OCR_API_MODEL,
+        )
+    return PageExtractorNode(
+        model_path=to_path(model_path) if model_path is not None else None,
+        local_only=local_only,
+    )
+
+
 class OCR:
     def __init__(
         self,
         model_path: PathLike | str | None,
         pdf_handler: PDFHandler | None,
         local_only: bool,
+        *,
+        ocr_backend: PageExtractorBackend | None = None,
+        ocr_api_key: str | None = None,
+        ocr_api_base_url: str | None = None,
+        ocr_api_model: str | None = None,
     ) -> None:
         self._pdf_handler = pdf_handler
         self._pdf_handler_lock = Lock()
-        self._extractor = PageExtractorNode(
-            model_path=to_path(model_path) if model_path is not None else None,
+        self._extractor = _resolve_extractor(
+            ocr_backend=ocr_backend,
+            ocr_api_key=ocr_api_key,
+            ocr_api_base_url=ocr_api_base_url,
+            ocr_api_model=ocr_api_model,
+            model_path=model_path,
             local_only=local_only,
         )
 
@@ -135,12 +178,10 @@ class OCR:
                         cost_time_ms=elapsed_ms,
                     )
                 else:
-                    from doc_page_extractor import TokenLimitError
-
                     if remain_tokens is not None and remain_tokens <= 0:
-                        raise TokenLimitError()
+                        raise TokenLimitError(0, 0)
                     if remain_output_tokens is not None and remain_output_tokens <= 0:
-                        raise TokenLimitError()
+                        raise TokenLimitError(0, 0)
 
                     page: Page | None = None
                     image: Image | None = None
@@ -174,6 +215,8 @@ class OCR:
                             device_number=device_number,
                             aborted=aborted,
                         )
+                    except TokenLimitError:
+                        raise
                     except PDFError as error:
                         if not _check_ignore_error(ignore_pdf_errors, error):
                             raise

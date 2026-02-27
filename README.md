@@ -179,6 +179,48 @@ transform_markdown(
 )
 ```
 
+#### Using a Third-Party OCR API (e.g. SiliconFlow)
+
+When you do not have a local GPU, you can use an OpenAI-compatible third-party API (e.g. [SiliconFlow](https://siliconflow.cn) DeepSeek-OCR) for OCR. Once an API key is set, conversion works without CUDA or local model download.
+
+**Environment variables** (optional; can also be passed as function arguments):
+
+- `SILICONFLOW_API_KEY` or `OCR_API_KEY`: API key
+- `OCR_API_BASE_URL`: API base URL (default: `https://api.siliconflow.cn/v1`)
+- `OCR_API_MODEL`: Model name (default: `DeepSeek/DeepSeek-OCR`)
+
+**Example**:
+
+```python
+import os
+os.environ["SILICONFLOW_API_KEY"] = "your-api-key"
+
+from pdf_craft import transform_markdown
+
+transform_markdown(
+    pdf_path="input.pdf",
+    markdown_path="output.md",
+    markdown_assets_path="images",
+)
+```
+
+Or pass options explicitly (overrides environment variables):
+
+```python
+from pdf_craft import transform_markdown
+
+transform_markdown(
+    pdf_path="input.pdf",
+    markdown_path="output.md",
+    markdown_assets_path="images",
+    ocr_api_key="your-api-key",
+    ocr_api_base_url="https://api.siliconflow.cn/v1",  # optional
+    ocr_api_model="DeepSeek/DeepSeek-OCR",  # optional
+)
+```
+
+**Current API mode limitations**: When using the API, each page is returned as a single block (no fine-grained bbox/ref), so TOC and reading order that rely on bbox may be weaker; footnotes are not separated. For best layout and footnote quality, use local GPU mode.
+
 ## API Reference
 
 ### OCR Models

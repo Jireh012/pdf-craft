@@ -4,14 +4,18 @@
 
 - Python >= 3.10, < 3.14（推荐 3.11.16）
 - Poppler（用于 PDF 解析和渲染）
-- NVIDIA GPU，支持 CUDA 11.8 或 12.1
-- 显存 16 GB 以上（推荐 24 GB 或更高，详见 [DeepSeek OCR 硬件需求讨论](https://huggingface.co/deepseek-ai/DeepSeek-OCR/discussions/31)）
+- **本地 OCR**：NVIDIA GPU，支持 CUDA 11.8 或 12.1；显存 16 GB 以上（推荐 24 GB 或更高，详见 [DeepSeek OCR 硬件需求讨论](https://huggingface.co/deepseek-ai/DeepSeek-OCR/discussions/31)）
+- **第三方 OCR API**：无需 GPU，仅需配置 API Key（如[硅基流动](https://siliconflow.cn) DeepSeek-OCR），参见 [README - 使用第三方 OCR API](../README_zh-CN.md#使用第三方-ocr-api如硅基流动)
 
 ## 安装步骤
 
-本项目使用 DeepSeek OCR 进行文档识别，**必须在 CUDA 环境下运行**。如果你需要实际使用 pdf-craft 进行 PDF 转换，请按照下方 CUDA 环境安装步骤操作。
+使用**本地** DeepSeek OCR 进行文档识别时，**必须在 CUDA 环境下运行**。若你改用**第三方 OCR API**（如硅基流动），则无需 CUDA，只需配置 API Key 即可完成转换。
 
-如果你仅需进行代码开发、IDE 类型提示或阅读源码，可以选择 CPU 环境安装作为替代方案，但无法执行实际的 OCR 识别。
+如果你需要实际使用 pdf-craft 进行 PDF 转换，可任选其一：
+- **本地 OCR**：按下方 CUDA 环境安装步骤操作
+- **第三方 API**：设置 `SILICONFLOW_API_KEY`（或 `OCR_API_KEY`）等，参见 [README - 使用第三方 OCR API](../README_zh-CN.md#使用第三方-ocr-api如硅基流动)
+
+如果你仅需进行代码开发、IDE 类型提示或阅读源码，可以选择 CPU 环境安装作为替代方案，但无法执行本地 OCR 识别（仍可使用第三方 API）。
 
 ### CUDA 环境安装（推荐）
 

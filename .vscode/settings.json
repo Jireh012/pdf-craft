@@ -65,5 +65,9 @@
         "virtualenvs",
         "YYYYMMDDH",
         "Zeyu"
-    ]
+    ],
+    "cursorpyright.analysis.diagnosticSeverityOverrides": {
+        "reportUnnecessaryTypeIgnoreComment": "none"
+    },
+    "cursorpyright.analysis.typeCheckingMode": "basic"
 }

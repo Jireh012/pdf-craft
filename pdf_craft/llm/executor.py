@@ -161,20 +161,17 @@ class LLMExecutor:
                     }
                 )
 
-        stream = self._client.chat.completions.create(
+        # 使用非流式请求以便可靠获取 usage（多数兼容接口在流式下不返回或格式不一致）
+        response = self._client.chat.completions.create(
             model=self._model_name,
             messages=messages,
-            stream=True,
-            stream_options={"include_usage": True},
+            stream=False,
             top_p=top_p,
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        buffer = StringIO()
-        usage = None
-        for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                buffer.write(chunk.choices[0].delta.content)
-            if getattr(chunk, "usage", None) is not None:
-                usage = chunk.usage
-        return buffer.getvalue(), usage
+        content = ""
+        if response.choices and response.choices[0].message is not None:
+            content = response.choices[0].message.content or ""
+        usage = getattr(response, "usage", None)
+        return content, usage

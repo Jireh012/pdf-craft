@@ -251,12 +251,15 @@ class Transform:
             metering.input_tokens += event.input_tokens
             metering.output_tokens += event.output_tokens
 
-        toc = analyse_toc(
+        toc, toc_usage = analyse_toc(
             pages_path=pages_path,
             toc_path=toc_path,
             toc_llm=toc_llm,
             toc_assumed=toc_assumed,
         )
+        if toc_usage is not None:
+            metering.toc_llm_input_tokens = toc_usage.get("input_tokens", 0)
+            metering.toc_llm_output_tokens = toc_usage.get("output_tokens", 0)
         generate_chapter_files(
             pages_path=pages_path,
             chapters_path=chapters_path,

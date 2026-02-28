@@ -81,7 +81,7 @@ class APIPageExtractor:
 
         url = _image_to_base64_data_url(image)
         # 与硅基流动文档一致：带 grounding 的文档转 Markdown 提示
-        prompt = "<image>\nConvert the document to markdown."
+        prompt = "<image>\n<|grounding|>Convert the document to markdown."
 
         messages = [
             {

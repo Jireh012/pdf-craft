@@ -61,7 +61,7 @@ class LLMContext:
                 permanent_cache_file = self._cache_path / f"{cache_key}.txt"
                 if permanent_cache_file.exists():
                     cached_content = permanent_cache_file.read_text(encoding="utf-8")
-                    return cached_content
+                    return cached_content, None
 
             if temperature is None:
                 temperature = self._temperature.current
@@ -69,7 +69,7 @@ class LLMContext:
                 top_p = self._top_p.current
 
             # Make the actual request
-            response = self._executor.request(
+            response, usage = self._executor.request(
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
@@ -86,7 +86,7 @@ class LLMContext:
                 temp_cache_file.write_text(response, encoding="utf-8")
                 self._temp_files.add(temp_cache_file)
 
-            return response
+            return response, usage
 
         finally:
             self._temperature.increase()

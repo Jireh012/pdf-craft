@@ -27,22 +27,22 @@ def analyse_toc(
     toc_path: Path,
     toc_assumed: bool,
     toc_llm: LLM | None = None,
-) -> TocInfo:
+) -> tuple[TocInfo, dict | None]:
     if toc_path.exists():
-        return decode_toc(read_xml(toc_path))
+        return decode_toc(read_xml(toc_path)), None
 
     toc_path.parent.mkdir(parents=True, exist_ok=True)
-    toc_info = _do_analyse_toc(pages_path, toc_llm, toc_assumed)
+    toc_info, usage = _do_analyse_toc(pages_path, toc_llm, toc_assumed)
     save_xml(encode_toc(toc_info), toc_path)
 
-    return toc_info
+    return toc_info, usage
 
 
 def _do_analyse_toc(
     pages_path: Path,
     toc_llm: LLM | None,
     toc_assumed: bool,
-) -> TocInfo:
+) -> tuple[TocInfo, dict | None]:
     pages: XMLReader[Page] = XMLReader(
         prefix="page",
         dir_path=pages_path,
@@ -67,11 +67,12 @@ def _do_analyse_toc(
 
     ref2level: Ref2Level | None = None
     toc_page_indexes: list[int] = []
+    toc_usage: list = []
 
     if toc_pages:
         if toc_llm is not None:
             try:
-                ref2level = analyse_toc_levels_by_llm(
+                ref2level, u = analyse_toc_levels_by_llm(
                     llm=toc_llm,
                     toc_page_refs=toc_pages,
                     toc_page_contents=list(
@@ -82,6 +83,8 @@ def _do_analyse_toc(
                         )
                     ),
                 )
+                if u:
+                    toc_usage.append(u)
             except LLMAnalysisError as error:
                 print(
                     f"LLM analysis toc failed, falling back to statistical method: {error}"
@@ -99,7 +102,9 @@ def _do_analyse_toc(
     else:
         if toc_llm is not None:
             try:
-                ref2level = analyse_title_levels_by_llm(toc_llm, pages)
+                ref2level, u = analyse_title_levels_by_llm(toc_llm, pages)
+                if u:
+                    toc_usage.append(u)
             except LLMAnalysisError as error:
                 print(
                     f"LLM analysis title failed, falling back to statistical method: {error}"
@@ -108,9 +113,18 @@ def _do_analyse_toc(
         if ref2level is None:
             ref2level = analyse_title_levels(pages)
 
-    return TocInfo(
-        content=_structure_toc_by_levels(ref2level),
-        page_indexes=toc_page_indexes,
+    total_usage = None
+    if toc_usage:
+        total_in = sum(x.get("input_tokens", 0) for x in toc_usage)
+        total_out = sum(x.get("output_tokens", 0) for x in toc_usage)
+        total_usage = {"input_tokens": total_in, "output_tokens": total_out}
+
+    return (
+        TocInfo(
+            content=_structure_toc_by_levels(ref2level),
+            page_indexes=toc_page_indexes,
+        ),
+        total_usage,
     )
 
 

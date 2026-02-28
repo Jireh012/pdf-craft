@@ -21,6 +21,8 @@ def check_aborted(aborted_check: AbortedCheck) -> None:
 class OCRTokensMetering:
     input_tokens: int
     output_tokens: int
+    toc_llm_input_tokens: int = 0
+    toc_llm_output_tokens: int = 0
 
 
 class InterruptedKind(Enum):

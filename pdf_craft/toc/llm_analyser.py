@@ -23,7 +23,17 @@ class LLMAnalysisError(Exception):
         super().__init__(message)
 
 
-def analyse_title_levels_by_llm(llm: LLM, pages: XMLReader[Page]) -> Ref2Level:
+def _sum_usage(usages: list) -> dict | None:
+    if not usages:
+        return None
+    total_in = sum(u.get("input_tokens", 0) for u in usages)
+    total_out = sum(u.get("output_tokens", 0) for u in usages)
+    return {"input_tokens": total_in, "output_tokens": total_out}
+
+
+def analyse_title_levels_by_llm(
+    llm: LLM, pages: XMLReader[Page], usage_accumulator: list | None = None
+) -> tuple[Ref2Level, dict | None]:
     titles: list[_Title] = []
     for page in pages.read():
         for layout in page.body_layouts:
@@ -39,7 +49,7 @@ def analyse_title_levels_by_llm(llm: LLM, pages: XMLReader[Page]) -> Ref2Level:
             )
 
     if not titles:
-        return {}
+        return {}, None
 
     # Use CV to group titles by font size (preliminary grouping)
     grouped_titles = list(
@@ -51,9 +61,11 @@ def analyse_title_levels_by_llm(llm: LLM, pages: XMLReader[Page]) -> Ref2Level:
             )
         )
     )
+    acc: list = [] if usage_accumulator is not None else []
     analyser = _LLMAnalyser(
         llm=llm,
         validate=_validate_title_response,
+        usage_accumulator=acc if usage_accumulator is not None else None,
     )
     levels = analyser.request(
         payload=len(titles),
@@ -78,17 +90,20 @@ def analyse_title_levels_by_llm(llm: LLM, pages: XMLReader[Page]) -> Ref2Level:
         if level >= 0:  # Only include non-noise titles
             ref2level[title.ref] = level
 
-    return ref2level
+    if usage_accumulator is not None:
+        usage_accumulator.extend(acc)
+    return ref2level, _sum_usage(acc)
 
 
 def analyse_toc_levels_by_llm(
     llm: LLM,
     toc_page_refs: list[PageRef],
     toc_page_contents: list[Page],
-) -> Ref2Level:
+    usage_accumulator: list | None = None,
+) -> tuple[Ref2Level, dict | None]:
     toc_entries = list(_extract_toc_entries(toc_page_contents))
     if not toc_entries:
-        return {}
+        return {}, None
 
     matched_title2references: list[tuple[str, list[tuple[int, int]]]] = []
     for page_ref in toc_page_refs:
@@ -98,11 +113,13 @@ def analyse_toc_levels_by_llm(
                 matched_title2references.append((matched_title.text, references))
 
     if not matched_title2references:
-        return {}
+        return {}, None
 
+    acc: list = [] if usage_accumulator is not None else []
     analyser = _LLMAnalyser(
         llm=llm,
         validate=_validate_toc_response,
+        usage_accumulator=acc if usage_accumulator is not None else None,
     )
     levels = analyser.request(
         payload=len(matched_title2references),
@@ -127,7 +144,9 @@ def analyse_toc_levels_by_llm(
         for page_index, order in references:
             ref2level[(page_index, order)] = level
 
-    return ref2level
+    if usage_accumulator is not None:
+        usage_accumulator.extend(acc)
+    return ref2level, _sum_usage(acc)
 
 
 def _extract_toc_entries(
@@ -557,9 +576,11 @@ class _LLMAnalyser(Generic[_P, _R]):
         self,
         llm: LLM,
         validate: Callable[[str, _P], tuple[_R | None, str | None]],
+        usage_accumulator: list | None = None,
     ) -> None:
         self._llm = llm
         self._validate: Callable[[str, _P], tuple[_R | None, str | None]] = validate
+        self._usage_accumulator = usage_accumulator
 
     def request(self, payload: _P, messages: Iterable[Message]) -> _R:
         last_error: str | None = None
@@ -567,7 +588,9 @@ class _LLMAnalyser(Generic[_P, _R]):
         tail_messages: list[Message] = []
 
         for attempt in range(_MAX_RETRIES):
-            response = self._llm.request(input=head_messages + tail_messages)
+            response, usage = self._llm.request(input=head_messages + tail_messages)
+            if self._usage_accumulator is not None and usage is not None:
+                self._usage_accumulator.append(usage)
             result, error_msg = self._validate(response, payload)
             if result is not None:
                 return result

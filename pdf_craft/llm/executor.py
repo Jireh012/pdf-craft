@@ -39,8 +39,9 @@ class LLMExecutor:
         temperature: float | None,
         top_p: float | None,
         cache_key: str | None,
-    ) -> str:
+    ) -> tuple[str, dict | None]:
         response: str = ""
+        usage: dict | None = None
         last_error: Exception | None = None
         did_success = False
         logger = self._create_logger()
@@ -60,12 +61,14 @@ class LLMExecutor:
         try:
             for i in range(self._retry_times + 1):
                 try:
-                    response = self._invoke_model(
+                    response, _usage = self._invoke_model(
                         input_messages=messages,
                         temperature=temperature,
                         top_p=top_p,
                         max_tokens=max_tokens,
                     )
+                    if _usage is not None:
+                        usage = _usage
                     if logger is not None:
                         logger.debug(f"[[Response]]:\n{response}\n")
 
@@ -95,7 +98,11 @@ class LLMExecutor:
             else:
                 raise last_error
 
-        return response
+        if usage is not None:
+            inp = getattr(usage, "input_tokens", None) or getattr(usage, "prompt_tokens", 0)
+            out = getattr(usage, "output_tokens", None) or getattr(usage, "completion_tokens", 0)
+            return response, {"input_tokens": inp or 0, "output_tokens": out or 0}
+        return response, None
 
     def _input2str(self, input: str | list[Message]) -> str:
         if isinstance(input, str):
@@ -129,7 +136,7 @@ class LLMExecutor:
         top_p: float | None,
         temperature: float | None,
         max_tokens: int | None,
-    ) -> str:
+    ) -> tuple[str, object]:
         messages: list[ChatCompletionMessageParam] = []
         for item in input_messages:
             if item.role == MessageRole.SYSTEM:
@@ -158,12 +165,16 @@ class LLMExecutor:
             model=self._model_name,
             messages=messages,
             stream=True,
+            stream_options={"include_usage": True},
             top_p=top_p,
             temperature=temperature,
             max_tokens=max_tokens,
         )
         buffer = StringIO()
+        usage = None
         for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
                 buffer.write(chunk.choices[0].delta.content)
-        return buffer.getvalue()
+            if getattr(chunk, "usage", None) is not None:
+                usage = chunk.usage
+        return buffer.getvalue(), usage

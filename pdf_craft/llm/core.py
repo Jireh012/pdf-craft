@@ -55,6 +55,10 @@ class LLM:
     def encoding(self) -> Encoding:
         return self._encoding
 
+    @property
+    def model(self) -> str:
+        return getattr(self._executor, "_model_name", "TOC LLM")
+
     def context(self, cache_seed_content: str | None = None) -> LLMContext:
         return LLMContext(
             executor=self._executor,
@@ -70,7 +74,7 @@ class LLM:
         max_tokens: int | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
-    ) -> str:
+    ) -> tuple[str, dict | None]:
         with self.context() as ctx:
             return ctx.request(
                 input=input,

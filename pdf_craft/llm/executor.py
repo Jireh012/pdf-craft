@@ -99,9 +99,13 @@ class LLMExecutor:
                 raise last_error
 
         if usage is not None:
-            inp = getattr(usage, "input_tokens", None) or getattr(usage, "prompt_tokens", 0)
-            out = getattr(usage, "output_tokens", None) or getattr(usage, "completion_tokens", 0)
-            return response, {"input_tokens": inp or 0, "output_tokens": out or 0}
+            if isinstance(usage, dict):
+                inp = usage.get("input_tokens") or usage.get("prompt_tokens", 0)
+                out = usage.get("output_tokens") or usage.get("completion_tokens", 0)
+            else:
+                inp = getattr(usage, "input_tokens", None) or getattr(usage, "prompt_tokens", 0)
+                out = getattr(usage, "output_tokens", None) or getattr(usage, "completion_tokens", 0)
+            return response, {"input_tokens": int(inp or 0), "output_tokens": int(out or 0)}
         return response, None
 
     def _input2str(self, input: str | list[Message]) -> str:

@@ -61,11 +61,11 @@ def analyse_title_levels_by_llm(
             )
         )
     )
-    acc: list = [] if usage_accumulator is not None else []
+    acc: list = []
     analyser = _LLMAnalyser(
         llm=llm,
         validate=_validate_title_response,
-        usage_accumulator=acc if usage_accumulator is not None else None,
+        usage_accumulator=acc,
     )
     levels = analyser.request(
         payload=len(titles),
@@ -115,11 +115,11 @@ def analyse_toc_levels_by_llm(
     if not matched_title2references:
         return {}, None
 
-    acc: list = [] if usage_accumulator is not None else []
+    acc: list = []
     analyser = _LLMAnalyser(
         llm=llm,
         validate=_validate_toc_response,
-        usage_accumulator=acc if usage_accumulator is not None else None,
+        usage_accumulator=acc,
     )
     levels = analyser.request(
         payload=len(matched_title2references),
